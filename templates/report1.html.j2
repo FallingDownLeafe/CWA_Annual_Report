@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>逐時潮位紀錄表　{{ station.name_zh }}　{{ year }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── 色彩（與 report3 / station_list 一致）────────────────────── */
+  :root {
+    --ink:      #1D3557;
+    --steel:    #457B9D;
+    --stripe:   #F1F3F5;
+    --text:     #212529;
+    --hairline: #C9D2D8;
+    --paper:    #FFFFFF;
+    --neg:      #1A5276;   /* 負值潮位 */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #DDE3E7;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--text);
+  }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* ── A4 橫式頁面 ──────────────────────────────────────────────── */
+  @page { size: A4 landscape; margin: 0; }
+  .page {
+    width: 297mm;
+    height: 210mm;          /* 固定高度，讓內容受限在 A4 內 */
+    margin: 10px auto;
+    background: var(--paper);
+    box-shadow: 0 2px 18px rgba(0,0,0,.18);
+    padding: 4mm 7mm 3mm 7mm;  /* 縮減 top/bottom */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page-break { page-break-after: always; }
+
+  /* ── 頁首 ─────────────────────────────────────────────────────── */
+  .report-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 4mm;
+    margin-bottom: 1mm;
+  }
+  .header-title { flex: 0 0 auto; }
+  .title-zh {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--ink); letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .title-en {
+    font-size: 7.5px; font-weight: 600;
+    color: var(--steel); letter-spacing: 3px;
+    margin-top: 1px;
+  }
+  .header-info {
+    flex: 1;
+    font-size: 7px;
+    color: var(--ink);
+    line-height: 1.65;
+  }
+  .header-info .lbl { color: var(--steel); }
+  .header-info .datum {
+    font-size: 6.5px; color: #6c757d; margin-top: 1px;
+  }
+  .header-right {
+    flex: 0 0 auto;
+    text-align: right;
+    font-size: 8px; font-weight: 700;
+    color: var(--ink); line-height: 1.8;
+  }
+  .header-right .sponsor {
+    font-size: 6px; font-weight: 400; color: #6c757d;
+  }
+
+  /* ── 資料表 ──────────────────────────────────────────────────── */
+  table {
+    width: 283mm;   /* 297 - 7mm×2 margins */
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  /* 欄寬（合計 ≈ 281mm）：
+     月相 5mm | 國曆 8mm | 農曆 10mm | 時刻×24 各 10mm | 日平均 18mm */
+  col.c-moon  { width:  5mm; }
+  col.c-greg  { width:  8mm; }
+  col.c-lunar { width: 10mm; }
+  col.c-h     { width: 10mm; }
+  col.c-mean  { width: 18mm; }
+
+  thead th {
+    background: var(--ink); color: #fff;
+    font-weight: 500; font-size: 6.5px;
+    padding: 1.5px 1px;
+    text-align: center;
+    border: 0.5px solid rgba(255,255,255,.2);
+    line-height: 1.3;
+  }
+  thead th.th-date { font-size: 7px; font-weight: 700; }
+  thead th.th-hour { font-size: 6px; }
+
+  tbody tr { height: 5.2mm; }
+  tbody td {
+    padding: 0;
+    border-bottom: 0.5px solid var(--hairline);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 6.5px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1;
+    overflow: hidden;
+  }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+
+  td.moon-sym {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 7px; color: var(--ink);
+    padding: 0;
+  }
+  td.greg-day {
+    font-size: 7px; font-weight: 500; color: var(--ink);
+  }
+  td.lunar-date {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 5.5px; color: #555; line-height: 1; white-space: nowrap;
+  }
+  td.tide-val { }
+  td.neg-val  { color: var(--neg); }
+  td.daily-mean {
+    font-size: 7px; font-weight: 500;
+    color: var(--ink);
+    border-left: 1px solid var(--hairline);
+  }
+  td.sparse-mark { color: #999; font-size: 6px; }
+
+  /* ── 腳注 ─────────────────────────────────────────────────────── */
+  .footnote {
+    margin-top: 1.5mm;
+    font-size: 6.5px; color: #6c757d; line-height: 1.7;
+  }
+
+  /* ── 頁尾 ─────────────────────────────────────────────────────── */
+  footer.page-footer {
+    margin-top: auto;
+    padding-top: 1.5mm;
+    border-top: 0.5px solid var(--hairline);
+    display: flex;
+    justify-content: space-between;
+    font-size: 6px; color: #6c757d;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+{% for page in pages %}
+<div class="page{% if not loop.last %} page-break{% endif %}">
+
+  <!-- 頁首 -->
+  <div class="report-header">
+    <div class="header-title">
+      <div class="title-zh">交通部中央氣象署逐時潮位紀錄表</div>
+      <div class="title-en">Hourly &nbsp; Tidal &nbsp; Record</div>
+    </div>
+
+    <div class="header-info">
+      <div>
+        <span class="lbl">測 站(Station): </span>{{ station.name_zh }}潮位站 {{ station.name_en }}
+        &ensp;
+        <span class="lbl">位 置(Location): </span>{{ station.lat }}　{{ station.lon }}　{{ station.location }}
+      </div>
+      <div class="datum">
+        潮高基準(Datum): 相對臺灣高程基準(TaiWan Vertical Datum 2001, TWVD2001)基隆海平面。
+        &ensp;潮高單位(Unit): 公分(cm)
+        {% if station.benchmark_id %}
+        &ensp;潮高參考水準點: 編號{{ station.benchmark_id }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="header-right">
+      民國{{ page.roc_year }}年{{ page.month_zh }}<br>
+      {{ page.month_en }} {{ page.year }}
+      {% if station.sponsor %}
+      <br><span class="sponsor">資料來源(sponsor): {{ station.sponsor }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 潮位資料表 -->
+  <table>
+    <colgroup>
+      <col class="c-moon">
+      <col class="c-greg">
+      <col class="c-lunar">
+      {% for h in range(24) %}<col class="c-h">{% endfor %}
+      <col class="c-mean">
+    </colgroup>
+    <thead>
+      <!-- 第一列：大欄標題 -->
+      <tr>
+        <th rowspan="2" colspan="2" class="th-date">日 期<br>Day</th>
+        <th rowspan="2" style="font-size:5.5px;line-height:1.4;">農<br>曆</th>
+        <th colspan="24" class="th-date">時　間（Hour）</th>
+        <th rowspan="2" class="th-date">日平均<br>Daily<br>Mean</th>
+      </tr>
+      <!-- 第二列：小時編號 -->
+      <tr>
+        {% for h in range(24) %}
+        <th class="th-hour">{{ h }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in page.rows %}
+      <tr>
+        <!-- 月相符號 -->
+        <td class="moon-sym">{{ row.moon_sym }}</td>
+
+        <!-- 國曆日 -->
+        <td class="greg-day">{{ row.greg_day }}</td>
+
+        <!-- 農曆月/日 -->
+        <td class="lunar-date">
+          {% if row.lunar_month is not none %}
+            {{ row.lunar_month }}/{{ row.lunar_day }}
+          {% endif %}
+        </td>
+
+        <!-- 0–23 時潮位 -->
+        {% for h in range(24) %}
+          {% set v = row.hours[h] %}
+          {% if v is none %}
+            <td class="tide-val"></td>
+          {% elif v < 0 %}
+            <td class="tide-val neg-val">{{ v }}</td>
+          {% else %}
+            <td class="tide-val">{{ v }}</td>
+          {% endif %}
+        {% endfor %}
+
+        <!-- 日平均 -->
+        {% if row.daily_mean is none %}
+          <td class="daily-mean sparse-mark">{% if row.is_sparse %}※{% endif %}</td>
+        {% elif row.daily_mean < 0 %}
+          <td class="daily-mean neg-val">{{ row.daily_mean }}</td>
+        {% else %}
+          <td class="daily-mean">{{ row.daily_mean }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- 腳注 -->
+  <div class="footnote">
+    註：1.空白表示沒有觀測或儀器故障。※表示該日觀測次數少於應觀測次數2/3，不統計。<br>
+    &emsp;&ensp;2.●新月New moon　◐上弦First Quarter Moon　○滿月Full moon　◑下弦Third Quarter Moon
+  </div>
+
+  <footer class="page-footer">
+    <div></div>
+    <div>{{ station.name_zh }}潮位站　Tidal Observation Data Annual Report {{ page.year }}</div>
+  </footer>
+
+</div>
+{% endfor %}
+
+</body>
+</html>

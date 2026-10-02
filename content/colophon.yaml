@@ -1,0 +1,48 @@
+# content/colophon.yaml — 版權頁文字（每年出版前修改此檔即可）
+# 以下為民國 110 年版（p999_版權頁.pdf）的原文，單位名稱、網址、電話、展售處等請自行更新為現況。
+# 標題年份（中華民國 ○ 年）與刊期由程式依 config.yaml 的 year 自動換算：
+#   刊期 = 民國年 − 76（110 年 = 第 34 期）；若要手動指定，把 issue_no 改成數字。
+# 欄位留空（或整個刪除）該行就不會出現在版權頁上。
+
+publisher:
+  name: 交通部中央氣象署
+  address: 10048 臺北市公園路 64 號
+  website: http://www.cwb.gov.tw
+  phones:
+    - "(02)23491196"
+    - "(02)23491197"
+
+editor: 交通部中央氣象署海象氣候組
+
+publish_date: auto   # auto = 執行當下年月；定稿後可改成固定文字，例：中華民國 114 年 5 月
+founded: 中華民國 77 年 6 月
+
+frequency: 年刊
+issue_no:            # 留空 = 自動計算；例：issue_no: 39
+
+# 「其他類型版本說明」後面接的文字（前面的標題由程式印出）
+other_edition_note: >-
+  （本刊另有提供電子版本免費下載，登載於中央氣象署官方網站-資料-研究出版與年報-海象資料，網址為 https://www.cwa.gov.tw/V8/C/D/publication.html）
+
+price: 新臺幣 1000 元整
+
+retailers:
+  - name: 國家書店 松江門市
+    address: 10485 臺北市中山區松江路 209 號 1 樓
+    phone: "(02)25180207"
+  - name: 五南文化廣場 臺中總店
+    address: 40042 臺中市中區中山路 6 號
+    phone: "(04)22260330"
+  - name: 交通部中央氣象署 綜合規劃組
+    address: 10048 臺北市公園路 64 號
+    phone: "(02)23491102、(02)23491103"
+
+gpn: "4309501601"
+issn: "1019-6315"
+
+copyright_holder: 交通部中央氣象署
+
+# 兩段 ◎ 聲明（◎ 符號由程式加上，這裡不用寫）。
+# 內容含「: 」或「#」時整段要用雙引號包起來，否則 YAML 會讀取失敗。
+notice_zh: "本著作保留所有權利，欲利用全部或部分內容者，須徵求著作財產權人中央氣象署同意或書面授權。請洽中央氣象署(電話：02-23491196)"
+notice_en: "All rights reserved. Any forms of using or quotation, part or all should be authorized by copyright holder Central Weather Administration. Please contact with Central Weather Administration ( TEL: 02-23491196)"

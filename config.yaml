@@ -1,0 +1,115 @@
+# 潮汐觀測年報 設定檔
+# 複製此檔為 config.yaml，依實際需求修改後執行 generate_report.py。
+# 所有路徑均相對於 generate_report.py 所在目錄。
+
+# ── 基本設定 ────────────────────────────────────────────────────────────────
+
+year: 2024   # 資料年份（西元年）
+
+# ── 測站清單 ────────────────────────────────────────────────────────────────
+# 方式 A：明列站碼（auto: false）
+#   - 系統依此順序排列測站，輸出報表和目錄均按此順序。
+#   - 若 auto: true，則忽略下列清單，改從 DB 自動抓取
+#     (st.kind IN ('6','9') AND st.reliable='1' AND st.sponsor='中央氣象署'
+#      且該年度 tidestat 有資料)，並按 stid 數值大小排序。
+#   - auto: false 時，清單內不符上述條件的站碼會被略過並印出警告。
+
+stations:
+  auto: false
+  list:
+    - "1516"    # 基隆
+    - "12191"   # 長潭里
+    - "1206"    # 麟山鼻
+    - "11006"   # 淡海
+    - "1102"    # 淡水
+    - "1116"    # 竹圍
+    - "112"     # 新竹
+    - "113"     # 外埔
+    - "1436"    # 臺中港
+    - "1156"    # 布子寮
+    - "1356"    # 澎湖馬公
+    - "13406"   # 吉貝
+    - "13606"   # 七美
+    - "C4W05"   # 東吉島
+    - "1366"    # 堀港
+    - "1166"    # 東石
+    - "1176"    # 將軍
+    - "1486"    # 高雄
+    - "1186"    # 東港
+    - "1386"    # 小琉球
+    - "1196"    # 後壁湖
+    - "1226"    # 龍洞
+    - "1826"    # 福隆
+    - "1236"    # 烏石
+    - "1246"    # 蘇澳
+    - "1256"    # 花蓮
+    - "1276"    # 成功
+    - "1396"    # 蘭嶼
+    - "1926"    # 馬祖
+    - "198"     # 東沙島
+
+# ── 輸出排列順序 ─────────────────────────────────────────────────────────────
+# by_station : 每站全部報表集中（站 A 四份 → 站 B 四份 → …）
+# by_type    : 依報表類型集中（全站 Report 3 → 全站 Report 2 → …）
+
+output_order: by_type
+
+# ── 目錄層級 ─────────────────────────────────────────────────────────────────
+# station : 只列前頁與各站（by_type 時只列各類型章節），約 1 頁，建議預設
+# full    : 每份報表都列（by_station 約 5 條/站，目錄會很長）
+# 註：station 需要 include.station_separator: true（各站分隔頁即目錄的站名條目）
+
+toc_level: station
+
+# ── 要產生的頁面 ─────────────────────────────────────────────────────────────
+include:
+  cover: true              # 封面頁
+  toc: true                # 目錄頁
+  explanation: true        # 說明文字（content/explanation.md）
+  station_table: true      # 潮位站一覽表
+  station_map: false       # 測站位置圖（matplotlib 自動產生）
+  reference_level: true    # 基準面圖解（靜態圖）
+  tidal_range_map: true    # 台灣潮差分布圖（靜態圖）
+  report3: true            # 逐月統計年報
+  report2: true            # 逐日高低潮月報
+  report1: true            # 逐時潮位紀錄表
+  report4: true            # 潮位時序圖（12 個月面板）
+  station_separator: true  # 各站（by_type 時各類型）章節分隔頁；toc_level: station 依賴它
+  back_cover: true         # 封底處理
+  page_numbers: true       # 合併後在每頁底部中央印頁碼（封面、版權頁、封底、分隔頁不印）
+
+# ── 封面設定 ────────────────────────────────────────────────────────────────
+cover:
+  # bg_image: "assets/cover_bg.png"   # 背景圖；若檔案不存在，改用素色封面
+  bg_image: "assets/很醜的封面圖.png"   
+
+# ── 靜態資產路徑 ─────────────────────────────────────────────────────────────
+assets:
+  # taiwan_outline_original: "assets/taiwan_outline_original.png"   # 測站位置圖準確打點原始檔
+  # taiwan_outline: "assets/taiwan_outline.png"   # 測站位置圖底圖
+  # reference_level: "assets/reference_level.png"
+  # tidal_range:     "assets/tidal_range.png"
+  taiwan_outline_original: "assets/taiwan_outline_original.pdf"
+  reference_level: "assets/reference_level.pdf"
+  tidal_range:     "assets/tidal_range.pdf"
+  back_cover: "assets/back_cover.pdf"
+
+# map:
+#   debug_grid: true            # 先開：疊上 0.5° 經緯網格，目視檢查海岸線對不對
+#   control_points:             # [經度, 緯度, 底圖 px, 底圖 py]，至少 3 點，越分散越準
+#     - [120.7714, 24.6514, 283.5, 183.0]
+#   pixel_overrides:            # 離島框內的站，手動指定像素位置
+#     "1926": [82, 70]          # 馬祖
+#     "198":  [66, 580]         # 東沙
+#   label:                      # 個別站標籤微調：side = left/right/above/below
+#     "1516": {side: right, dx: 6, dy: -3}
+
+# ── 說明文字來源 ─────────────────────────────────────────────────────────────
+content:
+  explanation_md: "content/explanation.md"
+
+# ── 輸出檔名 ────────────────────────────────────────────────────────────────
+output:
+  filename: "tide_report_{year}.pdf"   # {year} 自動替換為 year 欄位的值
+  html_dir: "output/html"              # 中間 HTML 暫存目錄（兩次轉換用）
+  pdf_dir:  "output"                   # 最終 PDF 輸出目錄

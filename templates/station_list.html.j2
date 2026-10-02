@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>潮位站一覽表 {{ roc_year }} 年</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── 色彩變數（與 report3 一致）──────────────────────────────── */
+  :root {
+    --ink:      #1D3557;
+    --steel:    #457B9D;
+    --stripe:   #F1F3F5;
+    --text:     #212529;
+    --hairline: #C9D2D8;
+    --paper:    #FFFFFF;
+  }
+
+  /* ── 基礎 ─────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #DDE3E7;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--text);
+    font-size: 10px;
+  }
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none !important; }
+  }
+
+  /* ── A4 直式頁面 ───────────────────────────────────────────────── */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 14px auto;
+    background: var(--paper);
+    box-shadow: 0 2px 18px rgba(0,0,0,.18);
+    padding: 14mm 14mm 10mm;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── 頁首 ──────────────────────────────────────────────────────── */
+  .page-title {
+    text-align: center;
+    margin-bottom: 6mm;
+  }
+  .page-title .zh {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 2px;
+    display: block;
+  }
+  .page-title .en {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--steel);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ── 表格 ──────────────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  /* 欄寬（合計 100%）：
+     序號4.5 站名11 舊碼8 新碼8 位置11 緯度8 經度9 高程8 水準點6.5 量測年6.5 所屬機構12 儀器7.5
+     位置欄每行字數上限 = station_list.py 的 _LOC_MAX_CHARS，改此欄寬時要同步調整。 */
+  col.c-seq     { width:  4.5%; }
+  col.c-name    { width: 11%; }
+  col.c-old     { width:  8%; }
+  col.c-new     { width:  8%; }
+  col.c-loc     { width: 11%; }
+  col.c-lat     { width:  8%; }
+  col.c-lon     { width:  9%; }
+  col.c-elev    { width:  8%; }
+  col.c-tgbm    { width:  6.5%; }
+  col.c-year    { width:  6.5%; }
+  col.c-sponsor { width: 12%; }
+  col.c-type    { width:  7.5%; }
+
+  thead th {
+    background: var(--ink);
+    color: #fff;
+    font-weight: 500;
+    font-size: 8.5px;
+    padding: 4px 2px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,.2);
+    line-height: 1.4;
+  }
+  /* 雙列表頭：第一列為大欄標題，第二列為子標題 */
+  thead th.group-header {
+    font-size: 8.5px;
+  }
+
+  tbody td {
+    padding: 3.5px 3px;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 8.5px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.5;
+    word-break: break-all;
+  }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  td.name-cell {
+    text-align: left;
+    padding-left: 4px;
+  }
+  td.name-cell .zh { font-weight: 500; color: var(--ink); display: block; }
+  td.name-cell .en { color: #555; font-size: 7.5px; display: block; }
+  td.seq-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--steel);
+    font-weight: 500;
+  }
+  td.mono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5px;
+  }
+  td.not-announced {
+    color: #999;
+    font-size: 7.5px;
+  }
+
+  /* 跨頁時不在行中間切斷 */
+  tbody tr { break-inside: avoid; }
+
+  /* ── 腳注 ──────────────────────────────────────────────────────── */
+  .footnote {
+    margin-top: auto;
+    padding-top: 3mm;
+    font-size: 8px;
+    color: #6c757d;
+    line-height: 1.7;
+  }
+
+  /* ── 頁尾 ──────────────────────────────────────────────────────── */
+  footer.report-footer {
+    padding-top: 3mm;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: #6c757d;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 頁面標題 -->
+  <div class="page-title">
+    <span class="zh">潮位站一覽表</span>
+    <span class="en">Table of Tide Stations</span>
+  </div>
+
+  <!-- 測站資料表 -->
+  <table>
+    <colgroup>
+      <col class="c-seq">
+      <col class="c-name">
+      <col class="c-old">
+      <col class="c-new">
+      <col class="c-loc">
+      <col class="c-lat">
+      <col class="c-lon">
+      <col class="c-elev">
+      <col class="c-tgbm">
+      <col class="c-year">
+      <col class="c-sponsor">
+      <col class="c-type">
+    </colgroup>
+    <thead>
+      <!-- 第一列：大欄標題（跨欄） -->
+      <tr>
+        <th rowspan="2">序號</th>
+        <th rowspan="2">站名<br>Station</th>
+        <th rowspan="2">舊站碼<br>Old<br>Station Id</th>
+        <th rowspan="2">新站碼<br>New<br>Station Id</th>
+        <th rowspan="2">位置<br>Location</th>
+        <th colspan="2" class="group-header">經緯度<br>Lat. &amp; Long.</th>
+        <th colspan="3" class="group-header">潮位站水準點<br>Tide gauge benchmark</th>
+        <th rowspan="2">所屬機構<br>Sponsor</th>
+        <th rowspan="2">儀器型式<br>Instrument<br>Type</th>
+      </tr>
+      <!-- 第二列：子欄標題 -->
+      <tr>
+        <th>緯度<br>Lat.</th>
+        <th>經度<br>Long.</th>
+        <th>高程值<br>(公尺)<br>Elevation<br>(m)</th>
+        <th>水準點<br>名稱<br>No.</th>
+        <th>量測年分<br>Survey<br>Year</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in stations %}
+      <tr>
+        <td class="seq-cell">{{ s.seq }}.</td>
+        <td class="name-cell">
+          <span class="zh">{{ s.name_zh }}</span>
+          <span class="en">{{ s.name_en }}</span>
+        </td>
+        <td class="mono">{{ s.stid }}</td>
+        <td class="mono">{{ s.stid_new }}</td>
+        <td style="text-align:left; font-size:7.5px; padding-left:3px;">{% for ln in s.location_lines %}{{ ln }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+        <td class="mono" style="font-size:7px;">{{ s.lat }}</td>
+        <td class="mono" style="font-size:7px;">{{ s.lon }}</td>
+        <td {% if s.elevation == '尚未公告' %}class="not-announced"{% else %}class="mono"{% endif %}>
+          {{ s.elevation }}
+        </td>
+        <td {% if s.tgbm == '尚未公告' %}class="not-announced"{% else %}class="mono"{% endif %}>
+          {{ s.tgbm }}
+        </td>
+        <td {% if s.report_year == '—' %}class="not-announced"{% else %}class="mono"{% endif %}>
+          {{ s.report_year }}
+        </td>
+        <td style="font-size:7.5px;">{{ s.sponsor_zh }}<br><span style="color:#6c757d;">{{ s.sponsor_en }}</span></td>
+        <td>{{ s.type_zh }}<br><span style="color:#6c757d; font-size:7.5px;">{{ s.type_en }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- 腳注 -->
+  <div class="footnote">
+    1. 高程值以臺灣高程基準 TWVD2001（以基隆港平均海水面為零點）為基準。<br>
+       &nbsp;&nbsp;&nbsp;Elevations are referenced to Taiwan Vertical Datum 2001 (TWVD2001),
+       in which the mean sea level of Keelung Port is the zero datum level.<br>
+    {% if has_lmsl %}
+    2. 標記 * 之測站位於離島，高程以當地平均海水面（LMSL）為基準，非 TWVD2001。<br>
+       &nbsp;&nbsp;&nbsp;Stations marked with * are located on outlying islands and referenced to Local Mean Sea Level (LMSL).<br>
+    {% endif %}
+    3. 「尚未公告」表示內政部國土測繪中心尚未公告該站水準點高程。<br>
+       &nbsp;&nbsp;&nbsp;"Not announced" indicates that the elevation has not yet been officially released by the Ministry of Interior.<br>
+    4. 「量測年分」為該水準點高程值所依據之內政部量測成果年分；本表沿用該次量測之高程值，不隨內政部每年公告值逐年更新。<br>
+       &nbsp;&nbsp;&nbsp;"Survey Year" is the year of the Ministry of the Interior survey on which the benchmark elevation is based.
+       The elevation is retained from that survey and is not updated with the Ministry's annual announcements.
+  </div>
+
+  <footer class="report-footer">
+    <div></div>
+    <div>Tidal Observation Data Annual Report {{ year }}</div>
+  </footer>
+
+</div>
+</body>
+</html>

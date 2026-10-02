@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>逐日潮位統計月報表　{{ station.name_zh }}　{{ year }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:      #1D3557;
+    --steel:    #457B9D;
+    --stripe:   #F1F3F5;
+    --text:     #212529;
+    --hairline: #C9D2D8;
+    --paper:    #FFFFFF;
+    --neg:      #1A5276;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #DDE3E7;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--text);
+    font-size: 7.5px;
+  }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* ── A4 直式 ─────────────────────────────────────────────────── */
+  @page { size: A4 portrait; margin: 0; }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 10px auto;
+    background: var(--paper);
+    box-shadow: 0 2px 18px rgba(0,0,0,.18);
+    padding: 7mm 7mm 6mm 7mm;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page-break { page-break-after: always; }
+
+  /* ── 頁首 ─────────────────────────────────────────────────────── */
+  .report-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 3mm;
+    margin-bottom: 2mm;
+  }
+  .header-title { flex: 0 0 auto; text-align: center; }
+  .title-zh {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--ink); letter-spacing: 1px; white-space: nowrap;
+  }
+  .title-en {
+    font-size: 7px; font-weight: 600;
+    color: var(--steel); letter-spacing: 3px; margin-top: 1px;
+  }
+  .header-info {
+    flex: 1; font-size: 7px; color: var(--ink); line-height: 1.7;
+  }
+  .header-info .lbl { color: var(--steel); }
+  .header-info .datum { font-size: 6.5px; color: #6c757d; margin-top: 1px; }
+  .header-right {
+    flex: 0 0 auto; text-align: right;
+    font-size: 8.5px; font-weight: 700; color: var(--ink); line-height: 1.8;
+  }
+  .header-right .sponsor { font-size: 6px; font-weight: 400; color: #6c757d; }
+
+  /* ── 主體：資料表 + 統計欄 ────────────────────────────────────── */
+  .content-row {
+    display: flex;
+    gap: 3mm;
+    flex: 1;
+    align-items: flex-start;
+    min-height: 0;
+  }
+
+  /* ── 資料表 ─────────────────────────────────────────────────────
+     欄寬（合計 ≈ 148mm）：
+     月相 5 | 日 9 | 農曆 11 | 時間×4 各 14 | 潮高×4 各 12 | 潮差 13     */
+  table.main-table {
+    width: 148mm;
+    flex-shrink: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  col.c-moon   { width:  5mm; }
+  col.c-greg   { width:  9mm; }
+  col.c-lunar  { width: 11mm; }
+  col.c-time   { width: 14mm; }
+  col.c-height { width: 12mm; }
+  col.c-range  { width: 13mm; }
+
+  thead th {
+    background: var(--ink); color: #fff;
+    font-weight: 500; font-size: 6.5px;
+    padding: 1.5px 1px; text-align: center;
+    border: 0.5px solid rgba(255,255,255,.2); line-height: 1.3;
+  }
+  thead th.th-date { font-size: 7px; font-weight: 700; }
+  thead th.th-group { font-size: 6.5px; }
+  thead th.th-sub   { font-size: 6px; }
+
+  tbody td {
+    padding: 1.3mm 0;
+    border-bottom: 0.5px solid var(--hairline);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7px; text-align: center;
+    vertical-align: middle; line-height: 1;
+    overflow: hidden;
+  }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  td.moon-sym {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 7.5px; color: var(--ink); padding: 0;
+  }
+  td.greg-day  { font-size: 7.5px; font-weight: 500; color: var(--ink); }
+  td.lunar-date {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 6px; color: #555; line-height: 1.35;
+  }
+  td.tide-time { font-size: 6.5px; }
+  td.tide-h    { }
+  td.neg-val   { color: var(--neg); }
+  td.range-val { font-weight: 500; color: var(--ink); border-left: 1px solid var(--hairline); }
+
+  /* ── 統計欄 ─────────────────────────────────────────────────────
+     寬度 45mm，位於右側                                             */
+  .stats-panel {
+    width: 45mm;
+    flex-shrink: 0;
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    font-size: 7px;
+    overflow: hidden;
+  }
+  .stats-title {
+    background: var(--ink); color: #fff;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 7.5px; font-weight: 700;
+    text-align: center; padding: 2mm 0 1.5mm;
+    letter-spacing: 0.5px; line-height: 1.5;
+  }
+  .stats-item {
+    padding: 2.2mm 3mm 2mm;
+    border-bottom: 0.5px solid var(--hairline);
+    line-height: 1.5;
+  }
+  .stats-item:nth-child(even) { background: var(--stripe); }
+  .stats-item.no-border { border-bottom: none; }
+  .stats-lbl {
+    color: var(--steel); font-size: 6.5px; font-weight: 500;
+    display: block; margin-bottom: 0.5mm;
+  }
+  .stats-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px; font-weight: 500; color: var(--ink);
+    display: block;
+  }
+  .stats-val.neg-val { color: var(--neg); }
+  .stats-dt {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 6.5px; color: #555;
+    display: block; margin-top: 0.5mm;
+  }
+  .stats-notes {
+    flex: 1;
+    padding: 2mm 3mm;
+    border-bottom: none;
+  }
+  .stats-notes .stats-lbl { margin-bottom: 1mm; }
+
+  /* ── 腳注 ─────────────────────────────────────────────────────── */
+  .footnote {
+    margin-top: 1.5mm;
+    font-size: 6.5px; color: #6c757d; line-height: 1.7;
+  }
+
+  /* ── 頁尾 ─────────────────────────────────────────────────────── */
+  footer.page-footer {
+    margin-top: 1mm; padding-top: 1.5mm;
+    border-top: 0.5px solid var(--hairline);
+    display: flex; justify-content: space-between;
+    font-size: 6px; color: #6c757d;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+{% for page in pages %}
+<div class="page{% if not loop.last %} page-break{% endif %}">
+
+  <!-- 頁首 -->
+  <div class="report-header">
+    <div class="header-title">
+      <div class="title-zh">交通部中央氣象署逐日潮位統計月報表</div>
+      <div class="title-en">Monthly &nbsp; Summary &nbsp; of &nbsp; Tidal &nbsp; Statistics</div>
+    </div>
+    <div class="header-info">
+      <div>
+        <span class="lbl">測 站(Station): </span>{{ station.name_zh }}潮位站 {{ station.name_en }}
+        &ensp;
+        <span class="lbl">位 置(Location): </span>{{ station.lat }}　{{ station.lon }}　{{ station.location }}
+      </div>
+      <div class="datum">
+        潮高基準(Datum): 相對臺灣高程基準(TaiWan Vertical Datum 2001, TWVD2001)基隆海平面。
+        &ensp;潮高單位(Unit): 公分(cm)
+        {% if station.benchmark_id %}
+        &ensp;潮高參考水準點: 編號{{ station.benchmark_id }}
+        {% endif %}
+      </div>
+    </div>
+    <div class="header-right">
+      民國{{ page.roc_year }}年{{ page.month_zh }}<br>
+      {{ page.month_en }} {{ page.year }}
+      {% if station.sponsor %}
+      <br><span class="sponsor">資料來源(sponsor): {{ station.sponsor }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 主體 -->
+  <div class="content-row">
+
+    <!-- 左側：逐日高低潮資料表 -->
+    <table class="main-table">
+      <colgroup>
+        <col class="c-moon">
+        <col class="c-greg">
+        <col class="c-lunar">
+        <col class="c-time">  <col class="c-height">  {# 1st H #}
+        <col class="c-time">  <col class="c-height">  {# 1st L #}
+        <col class="c-time">  <col class="c-height">  {# 2nd H #}
+        <col class="c-time">  <col class="c-height">  {# 2nd L #}
+        <col class="c-range">
+      </colgroup>
+      <thead>
+        <tr>
+          <th rowspan="2" colspan="2" class="th-date">日 期<br>Day</th>
+          <th rowspan="2" style="font-size:5.5px;line-height:1.4;">農<br>曆</th>
+          <th colspan="2" class="th-group">第一次高潮<br>1st High Tide</th>
+          <th colspan="2" class="th-group">第一次低潮<br>1st Low Tide</th>
+          <th colspan="2" class="th-group">第二次高潮<br>2nd High Tide</th>
+          <th colspan="2" class="th-group">第二次低潮<br>2nd Low Tide</th>
+          <th rowspan="2" class="th-group">潮差<br>Diurnal<br>Range</th>
+        </tr>
+        <tr>
+          <th class="th-sub">時間<br>Time</th>
+          <th class="th-sub">潮高<br>Height</th>
+          <th class="th-sub">時間<br>Time</th>
+          <th class="th-sub">潮高<br>Height</th>
+          <th class="th-sub">時間<br>Time</th>
+          <th class="th-sub">潮高<br>Height</th>
+          <th class="th-sub">時間<br>Time</th>
+          <th class="th-sub">潮高<br>Height</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page.rows %}
+        <tr>
+          <td class="moon-sym">{{ row.moon_sym }}</td>
+          <td class="greg-day">{{ row.greg_day }}</td>
+          <td class="lunar-date">
+            {% if row.lunar_month is not none %}
+              {{ row.lunar_month }}<br>{{ row.lunar_day }}
+            {% endif %}
+          </td>
+
+          {% if row.is_blank %}
+            {# Rule b：整日空白 #}
+            {% for _ in range(9) %}<td></td>{% endfor %}
+          {% else %}
+            {# 1st High #}
+            <td class="tide-time">{{ row.h1_time or '' }}</td>
+            <td class="tide-h{% if row.h1_height is not none and row.h1_height < 0 %} neg-val{% endif %}">
+              {{ row.h1_height if row.h1_height is not none else '' }}
+            </td>
+            {# 1st Low #}
+            <td class="tide-time">{{ row.l1_time or '' }}</td>
+            <td class="tide-h{% if row.l1_height is not none and row.l1_height < 0 %} neg-val{% endif %}">
+              {{ row.l1_height if row.l1_height is not none else '' }}
+            </td>
+            {# 2nd High #}
+            <td class="tide-time">{{ row.h2_time or '' }}</td>
+            <td class="tide-h{% if row.h2_height is not none and row.h2_height < 0 %} neg-val{% endif %}">
+              {{ row.h2_height if row.h2_height is not none else '' }}
+            </td>
+            {# 2nd Low #}
+            <td class="tide-time">{{ row.l2_time or '' }}</td>
+            <td class="tide-h{% if row.l2_height is not none and row.l2_height < 0 %} neg-val{% endif %}">
+              {{ row.l2_height if row.l2_height is not none else '' }}
+            </td>
+            {# Diurnal Range #}
+            <td class="range-val{% if row.diurnal_range is not none and row.diurnal_range < 0 %} neg-val{% endif %}">
+              {{ row.diurnal_range if row.diurnal_range is not none else '' }}
+            </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- 右側：統計值面板 -->
+    <div class="stats-panel">
+      <div class="stats-title">統 計 值<br>Statistics</div>
+
+      {% set s = page.stats %}
+
+      <div class="stats-item">
+        <span class="stats-lbl">平均海面位 (MSL)</span>
+        <span class="stats-val{% if s and s.msl is not none and s.msl < 0 %} neg-val{% endif %}">
+          {% if s and s.msl is not none %}{{ s.msl }}{{ s.star }} cm{% else %}—{% endif %}
+        </span>
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">平均高潮位 (MHWL)</span>
+        <span class="stats-val">
+          {% if s and s.mhwl is not none %}{{ s.mhwl }}{{ s.star }} cm{% else %}—{% endif %}
+        </span>
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">平均低潮位 (MLWL)</span>
+        <span class="stats-val{% if s and s.mlwl is not none and s.mlwl < 0 %} neg-val{% endif %}">
+          {% if s and s.mlwl is not none %}{{ s.mlwl }}{{ s.star }} cm{% else %}—{% endif %}
+        </span>
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">平均潮差 (MR)</span>
+        <span class="stats-val">
+          {% if s and s.mr is not none %}{{ s.mr }}{{ s.star }} cm{% else %}—{% endif %}
+        </span>
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">最大潮差 (MTR)</span>
+        <span class="stats-val">
+          {% if s and s.mtr is not none %}{{ s.mtr }}{{ s.star }} cm{% else %}—{% endif %}
+        </span>
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">最低低潮位 (LLWL)</span>
+        {% if s and s.llwl is not none %}
+        <span class="stats-dt">{{ s.llwl_day }}日 {{ s.llwl_time }}</span>
+        <span class="stats-val neg-val">{{ s.llwl }}{{ s.star }} cm</span>
+        {% else %}
+        <span class="stats-val">—</span>
+        {% endif %}
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">最高高潮位 (HHWL)</span>
+        {% if s and s.hhwl is not none %}
+        <span class="stats-dt">{{ s.hhwl_day }}日 {{ s.hhwl_time }}</span>
+        <span class="stats-val">{{ s.hhwl }}{{ s.star }} cm</span>
+        {% else %}
+        <span class="stats-val">—</span>
+        {% endif %}
+      </div>
+
+      <div class="stats-item">
+        <span class="stats-lbl">最高天文潮 (HAT)</span>
+        <span class="stats-val">
+          {% if s and s.hat is not none %}{{ s.hat }}{{ s.star }} cm{% else %}—{% endif %}
+        </span>
+      </div>
+
+      <div class="stats-notes stats-item no-border">
+        <span class="stats-lbl">備　註</span>
+      </div>
+    </div>
+
+  </div><!-- .content-row -->
+
+  <!-- 腳注 -->
+  <div class="footnote">
+    註：1.空白表示沒有觀測或儀器故障。<br>
+    &emsp;&ensp;2.＊表示該月觀測次數少於應測次數 2/3，右側統計值可能不具代表性。<br>
+    &emsp;&ensp;3.●新月New moon　◐上弦First Quarter Moon　○滿月Full moon　◑下弦Third Quarter Moon
+  </div>
+
+  <footer class="page-footer">
+    <div></div>
+    <div>{{ station.name_zh }}潮位站　Tidal Observation Data Annual Report {{ page.year }}</div>
+  </footer>
+
+</div>
+{% endfor %}
+
+</body>
+</html>
